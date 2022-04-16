@@ -2,6 +2,10 @@ import argparse
 import os
 import json
 import multiprocessing
+
+from model.encoder import TransformerEncoder, TransformerEncoderBothWise
+
+os.environ['MKL_THREADING_LAYER'] = 'GNU'
 import torch
 import numpy as np
 import time
@@ -275,11 +279,11 @@ def main():
   parser.add_argument('--return_att_weights', default=False, action='store_true')
   parser.add_argument('--seq', default=True, action='store_false')
   #dataset-related
-  parser.add_argument('--test_path', type=str, default='data/E1/test_splits/len_4/split_5')
+  parser.add_argument('--test_path', type=str, default='/data/mautushkin/N-PEPS/data/E1/test_splits/split_5')
   parser.add_argument('--result_path', type=str, default='results/E1/test/')
-  parser.add_argument('--att_model_path', type=str, default='trained_models/E1/N-PEPS')
+  parser.add_argument('--att_model_path', type=str, default='/data/mautushkin/N-PEPS/trained_models/E1/N-PEPS')
   parser.add_argument('--num_of_problems', type=int, default=-1)
-  parser.add_argument('--max_program_len', type=int, default=4)
+  parser.add_argument('--max_program_len', type=int, default=11)
   args = parser.parse_args()
 
 
@@ -298,9 +302,10 @@ def main():
   global_model.load(params.global_model_path)
   global_model.eval()
 
-  PE_model = PCCoder()
-  PE_model.load(params.PE_model_path)
-  PE_model.eval()
+  PE_model = None
+  # PE_model = PCCoder()
+  # PE_model.load(params.PE_model_path)
+  # PE_model.eval()
 
   if args.agg_type == 'ca' or args.agg_type =='ca_sc':
     att_model = AttModel(include_self_attention=args.include_self_attention, include_pos_emb=args.include_pos_emb,

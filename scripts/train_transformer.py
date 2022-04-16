@@ -1,115 +1,22 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import argparse
-import json
 import os
-
-from model.encoder import RomaDenseEncoder
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-import random
-import torch
-import multiprocessing
-
 import numpy as np
+import torch
+from torch import nn
+from torch.autograd import Variable
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torch.autograd import Variable
-from torch import nn
 from tqdm import tqdm
 
 import params
-from model.model import PCCoder
 from cuda import use_cuda, LongTensor, FloatTensor
-from env.env import ProgramEnv
-from env.operator import Operator, operator_to_index
-from env.statement import Statement, statement_to_index
-from dsl.program import Program
-from dsl.example import Example
-
-def save(model, optimizer, epoch, params):
-    save_dir = params.model_output_path
-    to_save = model.module if hasattr(model, "module") else model
-    torch.save(to_save.state_dict(), os.path.join(save_dir, "best_model.th"))
-    torch.save({"optimizer": optimizer.state_dict(), "last_epoch": epoch}, os.path.join(save_dir, "optim.th"))
-
-def generate_prog_data(line):
-    data = json.loads(line.rstrip())
-    examples = Example.from_line(data)
-    env = ProgramEnv(examples)
-    program = Program.parse(data['program'])
-
-    inputs = []
-    statements = []
-    drop = []
-    operators = []
-
-    for i, statement in enumerate(program.statements):
-        inputs.append(env.get_encoding())
-
-        # Translate absolute indices to post-drop indices
-        f, args = statement.function, list(statement.args)
-        for j, arg in enumerate(args):
-            if isinstance(arg, int):
-                args[j] = env.real_var_idxs.index(arg)
-
-        statement = Statement(f, args)
-        statements.append(statement_to_index[statement])
-
-        used_args = []
-        for next_statement in program.statements[i:]:
-            used_args += [x for x in next_statement.args if isinstance(x, int)]
-
-        to_drop = []
-        for j in range(params.max_program_vars):
-            if j >= env.num_vars or env.real_var_idxs[j] not in used_args:
-                to_drop.append(1)
-            else:
-                to_drop.append(0)
-
-        drop.append(to_drop)
-        rand_idx = random.choice([j for j in range(len(to_drop)) if to_drop[j] > 0])
-
-        operator = Operator.from_statement(statement)
-        operators.append(operator_to_index[operator])
-
-        if env.num_vars < params.max_program_vars:
-            env.step(statement)
-        else:
-            # Choose a random var (that is not used anymore) to drop.
-            env.step(statement, rand_idx)
-
-        # print("Inputs Shape:", [inp for inp in inputs])
-        # print("Statements:", statements)
-        # print("Drop:", drop)
-        # print("Operators:", operators)
-    return inputs, statements, drop, operators
-
-
-def load_data(fileobj, max_len):
-    X = []
-    Y = []
-    Z = []
-    W = []
-
-    #print("Loading dataset...")
-    lines = fileobj.read().splitlines()
-    if max_len is not None:
-        selected_lines = random.sample(lines, max_len)
-        lines = selected_lines
-
-    pool = multiprocessing.Pool(processes=5)
-    res = list(tqdm(pool.imap(generate_prog_data, lines), total=len(lines)))
-
-    for input, target, to_drop, operators in res:
-        X += input
-        Y += target
-        Z += to_drop
-        W += operators
-
-    return np.array(X), np.array(Y), np.array(Z), np.array(W)
+from model.encoder import TransformerEncoder, TransformerEncoderBothWise, RomaDenseEncoder
+from model.model import PCCoder
+from scripts.train import load_data, save
 
 
 def train():
@@ -126,13 +33,14 @@ def train():
         val_data, val_statement_target, val_drop_target, val_operator_target = load_data(f, params.max_len)
 
     # Define model
-    model = PCCoder(RomaDenseEncoder)
+    model = PCCoder(TransformerEncoderBothWise)
+    print(model)
     if use_cuda:
         model.cuda()
 
     #Define optimizer and loss
     optimizer = torch.optim.Adam(model.parameters(), lr=params.learn_rate)
-    lr_sched = torch.optim.lr_scheduler.StepLR(optimizer, step_size=params.lr_scheduler_step_size)
+    lr_sched = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=0)
 
     if params.load_from_checkpoint:
         print("=> loading checkpoint '{}'".format(params.checkpoint_dir))
@@ -242,7 +150,7 @@ def train():
                 save(model, optimizer, epoch, params)
                 patience_ctr = 0
             else:
-                patience_ctr += 1
+                # patience_ctr += 1
                 if patience_ctr == params.patience:
                     print("Ran out of patience. Stopping training early...")
                     break

@@ -3,6 +3,7 @@ import os
 import json
 import torch
 import numpy as np
+import tqdm
 
 import params
 import random
@@ -125,7 +126,7 @@ def generate_data(problems, PE_model, max_program_len, peps_timeout_type, output
     peps_timeouts = [0.4, 0.5, 0.6]
   f = open(output_data_path, 'w')
 
-  for i in range(len(problems)): #iterate over the data
+  for i in tqdm.tqdm(range(len(problems))): #iterate over the data
       problem = problems[i]
       #print("Problem: ", i+1)
       global_solution = problem['program']
@@ -148,11 +149,11 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--seed', type=int, default=42)
   #dataset-related
-  parser.add_argument('--input_data_path', type=str, default='../data/E2/train_dataset')
-  parser.add_argument('--output_data_path', type=str, default='../data/E2/agg_train_dataset_rand')
+  parser.add_argument('--input_data_path', type=str, default='data/E1/val_dataset_gps')
+  parser.add_argument('--output_data_path', type=str, default='data/E1/agg_val_dataset_rand')
   parser.add_argument('--peps_timeout_type', type=str, default='rand')
   parser.add_argument('--num_of_problems', type=int, default=-1)
-  parser.add_argument('--max_program_len', type=int, default=12)
+  parser.add_argument('--max_program_len', type=int, default=4)
   args = parser.parse_args()
 
   torch.manual_seed(args.seed)

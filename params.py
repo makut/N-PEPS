@@ -3,14 +3,14 @@ seed = 9
 # General training
 num_epochs = 100
 patience = 20
-model_output_path = 'trained_models/E1/N-PEPS/' #'trained_models/E1/GPS_model/'
+model_output_path = 'my/trained_models/E1/transformer_bothwise/' #'trained_models/E1/GPS_model/'
 load_from_checkpoint = False
 checkpoint_dir = ''
 max_len = None #For debugging set a lower number, use None for running training for full data
 
 # File params (Inference)
-global_model_path = 'trained_models/E1/GPS_model/best_model.th' #GPS model path
-PE_model_path = 'trained_models/E1/PE_model/best_model.th' #PE model path
+global_model_path = 'my/trained_models/E1/GPS_model/best_model.th' #GPS model path
+PE_model_path = 'my/trained_models/E1/PE_model/best_model.th' #PE model path
 result_path = 'results/'
 
 # GPS and PE model training params
@@ -23,6 +23,8 @@ lr_scheduler_step_size = 4
 
 #Aggregator training params
 att_batch_size = 256
+
+transformer_size = 64
 
 #Inference params
 search_method = 'beam'

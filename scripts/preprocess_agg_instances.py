@@ -120,7 +120,7 @@ def generate_preprocessed_data(input_path, include_perfect_PE_programs, agg_inp=
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_path', type=str, default='../data/E2/agg_val_dataset_0.5')
+    parser.add_argument('--input_path', type=str, default='data/E1/agg_val_dataset_rand')
     parser.add_argument('--agg_inp', type=str, default='tot')
     parser.add_argument('--include_perfect_PE_programs', default=True, action='store_false')
     args = parser.parse_args()

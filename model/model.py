@@ -7,7 +7,7 @@ import torch
 from cuda import use_cuda
 from env.statement import num_statements
 from env.operator import num_operators
-from model.encoder import DenseEncoder
+from model.encoder import DenseEncoder, RomaDenseEncoder
 
 
 class BaseModel(nn.Module):
@@ -31,12 +31,14 @@ class BaseModel(nn.Module):
 
 
 class PCCoder(BaseModel):
-    def __init__(self):
+    def __init__(self, encoder_class=DenseEncoder):
         super(PCCoder, self).__init__()
-        self.encoder = DenseEncoder()
-        self.statement_head = nn.Linear(params.dense_output_size, num_statements)
-        self.drop_head = nn.Linear(params.dense_output_size, params.max_program_vars)
-        self.operator_head = nn.Linear(params.dense_output_size, num_operators)
+        self.encoder = encoder_class()
+        # size = params.dense_output_size if encoder_class is DenseEncoder or encoder_class is RomaDenseEncoder else params.transformer_size
+        size = params.dense_output_size
+        self.statement_head = nn.Linear(size, num_statements)
+        self.drop_head = nn.Linear(size, params.max_program_vars)
+        self.operator_head = nn.Linear(size, num_operators)
 
     def forward(self, x, get_operator_head=True):
         x = self.encoder(x)

@@ -80,7 +80,7 @@ def analyze_results(result_dir, out_filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', type=str, default='results/E1/test/')
+    parser.add_argument('--dir', type=str, default='results/E2/per_state_transformer/')
     parser.add_argument('--out_filename', type=str, default='combined_results.csv')
     args = parser.parse_args()
 

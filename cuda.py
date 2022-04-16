@@ -1,6 +1,7 @@
 import torch
 
 use_cuda = torch.cuda.is_available()
+# use_cuda = False
 
 if use_cuda:
     LongTensor = torch.cuda.LongTensor

@@ -2,8 +2,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import json
 import os
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 import random
 import torch
+
+torch.set_num_threads(5)
+torch.set_num_interop_threads(5)
+
 import time
 import multiprocessing
 
@@ -25,8 +34,6 @@ from env.operator import Operator, operator_to_index
 from env.statement import Statement, statement_to_index
 from dsl.program import Program
 from dsl.example import Example
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -99,12 +106,12 @@ def calculate_loss(att_model, global_state, PE_states, PE_statements, PE_operato
 def main():
     parser = argparse.ArgumentParser()
     #ind or tot only affects the number of PE solutions discovered
-    parser.add_argument('--agg_train_path', type=str, default='data/E1/agg_train_dataset_rand_exclude_one_zero_tot')
-    parser.add_argument('--agg_val_path', type=str, default='data/E1/agg_val_dataset_rand_exclude_one_zero_tot')
-    parser.add_argument('--att_type', type=str, default='ca_sc', help='ca=N-PEPS, ca_sc=N-PEPS+U')
-    parser.add_argument('--att_lr_optimizer', type=str, default='adam')
-    parser.add_argument('--att_lr_scheduler', type=str, default='cosinewarm')
-    parser.add_argument('--att_learn_rate', type=float, default=3e-4)
+    parser.add_argument('--agg_train_path', type=str, default='data/E1/agg_train_dataset_rand_exclude_zero_tot')
+    parser.add_argument('--agg_val_path', type=str, default='data/E1/agg_val_dataset_rand_exclude_zero_tot')
+    parser.add_argument('--att_type', type=str, default='ca', help='ca=N-PEPS, ca_sc=N-PEPS+U')
+    parser.add_argument('--att_lr_optimizer', type=str, default='sgd')
+    parser.add_argument('--att_lr_scheduler', type=str, default='cosine')
+    parser.add_argument('--att_learn_rate', type=float, default=1e-4)
     parser.add_argument('--key_type', type=str, default='sii', help='sig=N-PEPS-PG, sii=N-PEPS-PP, sij=N-PEPS')
     parser.add_argument('--example_type', type=str, default='all', help='set, all')
     parser.add_argument('--return_att_weights', default=False, action='store_true')
