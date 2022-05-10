@@ -7,7 +7,7 @@ import torch
 from cuda import use_cuda
 from env.statement import num_statements
 from env.operator import num_operators
-from model.encoder import DenseEncoder, RomaDenseEncoder
+from model.encoder import DenseEncoder, RomaDenseEncoder, TransformerEncoderBothWise
 
 
 class BaseModel(nn.Module):

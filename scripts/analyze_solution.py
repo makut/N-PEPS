@@ -22,12 +22,13 @@ def analyze(path):
         #print("%f: %f" % (ratio, times[int(ratio * len(times)) - 1]))
 
     #print("Total solved: %d\\%d - %f%%" % (len(succeeded), len(res), len(succeeded) / len(res) * 100.0))
-    return len(succeeded) / len(res) * 100.0
+    return len(succeeded) / len(res) * 100.0, sum(x['beam_1'] for x in res) / len(res) * 100.0, sum(x['beam_10'] for x in res) / len(res) * 100.0
 
 def store_results(filenames, out_filename, success_ratio, result_dir):
     df = pd.DataFrame()
-    splits, success_ratios, methods, gps_timeouts, peps_timeouts, agg_modes, agg_types, alphas, agg_inps, agg_models, machine_names, seeds = \
-        [], [], [], [], [], [], [], [], [], [], [], []
+    success_ratio, beam_1, beam_10 = zip(*success_ratio)
+    splits, success_ratios, methods, gps_timeouts, peps_timeouts, agg_modes, agg_types, alphas, agg_inps, beams_1, beams_10, agg_models, machine_names, seeds = \
+        [], [], [], [], [], [], [], [], [], [], [], [], [], []
     for i in range(len(filenames)):
         file = filenames[i]
         parts = file.split("#")
@@ -36,6 +37,8 @@ def store_results(filenames, out_filename, success_ratio, result_dir):
         splits.append(parts[2])
         methods.append(parts[3])
         success_ratios.append(success_ratio[i])
+        beams_1.append(beam_1[i])
+        beams_10.append(beam_10[i])
         if parts[3] =='gps':
             gps_timeouts.append(parts[4])
             peps_timeouts.append("")
@@ -65,6 +68,8 @@ def store_results(filenames, out_filename, success_ratio, result_dir):
     df["machine_name"] = machine_names
     df["seed"] = seeds
     df["success_ratio"] = success_ratios
+    df["beam_1"] = beams_1
+    df["beam_10"] = beams_10
 
     df.to_csv(os.path.join(result_dir, out_filename))
 
@@ -73,6 +78,8 @@ def analyze_results(result_dir, out_filename):
     res_dirs = []
     success_ratios = []
     for file in all_dirs:
+        if file == out_filename:
+            continue
         path = os.path.join(result_dir, file)
         success_ratios.append(analyze(path))
         res_dirs.append(file)
@@ -80,11 +87,12 @@ def analyze_results(result_dir, out_filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', type=str, default='results/E2/per_state_transformer/')
+    parser.add_argument('--dir', type=str, default='../results/E2/')
     parser.add_argument('--out_filename', type=str, default='combined_results.csv')
     args = parser.parse_args()
 
-    analyze_results(args.dir, args.out_filename)
+    for subdir in os.listdir(args.dir):
+        analyze_results(os.path.join(args.dir, subdir), args.out_filename)
 
 
 if __name__ == '__main__':

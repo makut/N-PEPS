@@ -120,7 +120,7 @@ def agg_and_cab(global_env, global_model, att_model, PE_preds, PE_solution_score
 
 def agg_and_beam_search(global_env, global_model, att_model, state, PE_preds,
                         PE_solution_scores, beam_size, expansion_size, max_depth,
-                        alpha, beta, agg_mode, agg_type):
+                        alpha, beta, agg_mode, agg_type, device='cpu'):
     """
     Performs a beam search where the nodes are program environments and the edges are possible statements.
     """
@@ -141,7 +141,7 @@ def agg_and_beam_search(global_env, global_model, att_model, state, PE_preds,
 
         new_beams = []
         global_env_encodings = [beam[0].get_encoding() for beam in beams]
-        global_env_encodings = torch.LongTensor(global_env_encodings)
+        global_env_encodings = torch.from_numpy(np.stack(global_env_encodings)).to(device)
         global_statement_probs, global_drop_indx = global_model.predict(global_env_encodings)
 
 

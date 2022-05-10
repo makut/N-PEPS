@@ -169,14 +169,14 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerEncoderBothWise(nn.Module):
-    def __init__(self):
+    def __init__(self, n_layers=2, n_head=4, dim=128):
         super(TransformerEncoderBothWise, self).__init__()
         self.embedding = nn.Embedding(params.integer_range + 1, params.embedding_size)
         self.var_encoder = nn.Linear(params.max_list_len * params.embedding_size + params.type_vector_len,
                                      params.transformer_size)
-        transformer_layer = nn.TransformerEncoderLayer(params.transformer_size, 4, 128)
+        transformer_layer = nn.TransformerEncoderLayer(params.transformer_size, n_head, dim)
         self.pos_encoding = LearnablePositionalEncoding(params.transformer_size)
-        self.transformer = nn.TransformerEncoder(transformer_layer, 2)
+        self.transformer = nn.TransformerEncoder(transformer_layer, n_layers)
         # transformer_layer = nn.TransformerEncoderLayer(params.transformer_size, 8, 256)
         # self.pos_encoding = PositionalEncoding(params.transformer_size)
         # self.transformer = nn.TransformerEncoder(transformer_layer, 8)
@@ -230,7 +230,7 @@ class RomaDenseEncoder(nn.Module):
         self.var_encoder = nn.Linear(params.max_list_len * params.embedding_size + params.type_vector_len,
                                      params.var_encoder_size)
         self.transformer_layers = nn.ModuleList(
-            [nn.TransformerEncoderLayer(params.var_encoder_size, 8, 1024, activation='relu', batch_first=True) for _ in
+            [nn.TransformerEncoderLayer(params.var_encoder_size, 8, 1024, activation=F.selu, batch_first=True) for _ in
              range(5)])
         self.encoder = nn.Linear(params.var_encoder_size * params.state_len, params.dense_output_size)
 

@@ -1,9 +1,15 @@
 import argparse
 import os
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 import json
 import multiprocessing
 
-from model.encoder import TransformerEncoder, TransformerEncoderBothWise
+from cuda import use_cuda
+from model.encoder import TransformerEncoder, TransformerEncoderBothWise, DenseEncoder
 
 os.environ['MKL_THREADING_LAYER'] = 'GNU'
 import torch
@@ -15,7 +21,7 @@ import itertools
 from model.model import PCCoder
 from env.env import ProgramEnv
 from env.statement import Statement, statement_to_index
-from env.search import cab, dfs, agg_and_cab
+from env.search import cab, dfs, agg_and_cab, agg_and_beam_search
 from dsl.example import Example
 from dsl.program import Program
 from dsl.value import Value
@@ -250,7 +256,34 @@ def solve_problems(test_problems, global_model, PE_model, method, agg_inp, agg_m
       global_solution['PE_solution_scores'] = PE_solution_scores
       global_solution['time']+= peps_time
       global_solutions.append(global_solution)
+
+  if use_cuda:
+    global_model.cuda()
+  beam_1 = no_time_eval(test_problems, global_model, 1)
+  beam_10 = no_time_eval(test_problems, global_model, 10)
+  for i in range(len(test_problems)):
+      global_solutions[i]['beam_1'] = beam_1[i]
+      global_solutions[i]['beam_10'] = beam_10[i]
   return global_solutions
+
+
+def no_time_eval(problems, model, beam_size):
+  success = []
+  counter, fail_counter = 0, 0
+  for problem in problems:
+      examples = Example.from_line(problem)
+      env = ProgramEnv(examples)
+      top1_pred = agg_and_beam_search(
+          env, model, None, {'num_invalid': 0, 'num_steps': 0, 'end_time': float('inf')},
+          None, None, beam_size, beam_size, 12, None, None, 'none', None,
+          device='cuda' if use_cuda else 'cpu'
+      )
+      success.append(top1_pred is not False)
+      counter += 1
+      fail_counter += not success[-1]
+      print("\rSolving no time... %d (failed: %d)" % (counter, fail_counter), end="")
+  return success
+
 
 def main():
   #Get command-line arguments
@@ -284,6 +317,8 @@ def main():
   parser.add_argument('--att_model_path', type=str, default='/data/mautushkin/N-PEPS/trained_models/E1/N-PEPS')
   parser.add_argument('--num_of_problems', type=int, default=-1)
   parser.add_argument('--max_program_len', type=int, default=11)
+  parser.add_argument('--model_base_path', type=str, default='GPS_model')
+
   args = parser.parse_args()
 
 
@@ -297,8 +332,27 @@ def main():
   if args.num_of_problems != -1:
     test_problems = test_problems[:args.num_of_problems]
 
+  params.global_model_path = params.global_model_path.format(args.model_base_path)
+
   # Load models
-  global_model = PCCoder()
+  param = params.global_model_path.split('/')[-2]
+  model_creator = DenseEncoder
+
+  if 'TransformerEncoderBothWise' in param:
+      param = param[len('TransformerEncoderBothWise'):]
+      param = param.split('_')
+      for i in range(len(param)):
+          if not param[i][-1].isdigit():
+              param[i + 1] = param[i] + '_' + param[i + 1]
+              param[i] = None
+      param = [elem for elem in param if elem is not None]
+      for i in range(len(param)):
+          param[i] = param[i].split('=')
+          param[i] = (param[i][0], int(param[i][1]))
+      param = dict(param)
+      model_creator = lambda: TransformerEncoderBothWise(**param)
+
+  global_model = PCCoder(model_creator)
   global_model.load(params.global_model_path)
   global_model.eval()
 
