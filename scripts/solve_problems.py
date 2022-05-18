@@ -259,11 +259,11 @@ def solve_problems(test_problems, global_model, PE_model, method, agg_inp, agg_m
 
   if use_cuda:
     global_model.cuda()
-  beam_1 = no_time_eval(test_problems, global_model, 1)
-  beam_10 = no_time_eval(test_problems, global_model, 10)
-  for i in range(len(test_problems)):
-      global_solutions[i]['beam_1'] = beam_1[i]
-      global_solutions[i]['beam_10'] = beam_10[i]
+  # beam_1 = no_time_eval(test_problems, global_model, 1)
+  # beam_10 = no_time_eval(test_problems, global_model, 10)
+  # for i in range(len(test_problems)):
+  #     global_solutions[i]['beam_1'] = beam_1[i]
+  #     global_solutions[i]['beam_10'] = beam_10[i]
   return global_solutions
 
 
